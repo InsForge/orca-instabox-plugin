@@ -31,7 +31,7 @@ const run = (args, options) => {
     }
     fail('instabox ' + args[0] + ': ' + result.error.message);
   }
-  if (result.stderr) {
+  if (result.stderr && !(options && options.quiet)) {
     process.stderr.write(result.stderr);
   }
   return result;
@@ -44,6 +44,14 @@ const must = (args, options) => {
   }
   return result.stdout;
 };
+
+const QUOTE = String.fromCharCode(39);
+const BACKSLASH = String.fromCharCode(92);
+const shellQuote = (value) => QUOTE + String(value).split(QUOTE).join(QUOTE + BACKSLASH + QUOTE + QUOTE) + QUOTE;
+
+// Older instabox CLIs join exec words with bare spaces, so send one pre-quoted command word.
+const remote = (machineId, command, flags, options) =>
+  run(['exec', machineId].concat(flags || [], ['--', command]), options);
 
 const slug = (value) => {
   let out = '';
@@ -111,9 +119,10 @@ const readPayload = () => {
 };
 
 const machineState = (machineId) => {
-  const result = run(['get', machineId, '--json']);
+  const result = run(['get', machineId, '--json'], { quiet: true });
   if (result.status !== 0) {
-    return result.stderr.includes('not_found') || result.stderr.includes('not found') ? 'gone' : 'unknown';
+    const missing = ['no sandbox with', 'not_found', 'not found'].some((text) => result.stderr.includes(text));
+    return missing ? 'gone' : 'unknown';
   }
   const machine = JSON.parse(result.stdout);
   return String(machine.state || machine.status || 'unknown').toLowerCase();
@@ -153,15 +162,18 @@ const create = () => {
   let machineId = name;
   try {
     machineId = JSON.parse(must(['get', name, '--json'])).id || name;
-    const home = must(['exec', machineId, '--', 'pwd']).trim();
+    const pwd = remote(machineId, 'pwd');
+    const home = pwd.status === 0 ? pwd.stdout.trim() : '';
     if (!home.startsWith('/')) {
       throw new Error('Could not read the home directory of ' + name + '.');
     }
     const projectRoot = home + '/' + repoDirName(repoUrl);
-    run(['exec', machineId, '--', 'gh', 'auth', 'setup-git']);
+    remote(machineId, 'gh auth setup-git', [], { quiet: true });
     log('Cloning ' + withoutCredentials(repoUrl) + ' into ' + projectRoot + '.');
-    const clone = run(
-      ['exec', machineId, '--timeout', '600', '--env', 'GIT_TERMINAL_PROMPT=0', '--', 'git', 'clone', '--quiet', '--', repoUrl, projectRoot],
+    const clone = remote(
+      machineId,
+      'git clone --quiet -- ' + shellQuote(repoUrl) + ' ' + shellQuote(projectRoot),
+      ['--timeout', '600', '--env', 'GIT_TERMINAL_PROMPT=0'],
       { timeoutSeconds: 660 }
     );
     if (clone.status !== 0) {
@@ -181,16 +193,13 @@ const suspend = () => {
   must(['suspend', machineId]);
 };
 
-// Rotate the token on every resume so a token outlives at most one sleep.
+// Orca keeps dialing the SSH target saved at create, so resume must keep that token alive.
 const resume = () => {
   const { machineId, recipeResult } = readPayload();
   if (machineState(machineId) !== 'running') {
     must(['resume', machineId]);
   }
-  run(['ssh-token', '--revoke', machineId]);
-  const machineName = recipeResult.userData.machineName || machineId;
-  const projectRoot = recipeResult.connection.projectRoot;
-  process.stdout.write(JSON.stringify(connectionResult(machineId, machineName, projectRoot)) + NL);
+  process.stdout.write(JSON.stringify(recipeResult) + NL);
 };
 
 const destroy = () => {

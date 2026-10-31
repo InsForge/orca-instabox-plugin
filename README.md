@@ -13,13 +13,15 @@ What each workspace does:
 - **Create**: makes a machine named `orca-<workspace>-<id>`, clones the repository's `origin`
   remote into the machine's home over HTTPS, and hands Orca an SSH connection. Orca installs its
   server on the machine and creates the workspace's worktree there.
-- **Sleep / wake**: suspends and resumes the machine. Every wake replaces the SSH token.
+- **Sleep / wake**: suspends and resumes the machine; the workspace reconnects with the same token.
 - **Delete**: deletes the machine, which also revokes its SSH tokens.
 
 If any create step fails, the machine is deleted again.
 
 ## Requirements
 
+- Orca's per-workspace environments turned on: Settings → Experimental → per-workspace
+  environments (`experimentalEphemeralVms`). Until then the recipes do not show in "Run on".
 - The `instabox` CLI on `PATH`, signed in (`instabox login`).
 - `node` on `PATH`: the recipe commands run `node -e`.
 - A repository with an `origin` remote. SSH remotes (`git@github.com:org/repo.git`) are cloned as
@@ -31,8 +33,15 @@ If any create step fails, the machine is deleted again.
 
 Each workspace gets an Instabox SSH token (`instabox ssh-token`) and Orca dials
 `ssh.instabox.sh:2222` with the token as the user name and no key. The token is a bearer secret
-that Orca stores with the workspace's SSH target; it is revoked when the workspace wakes (a new one
-is issued) and when the machine is deleted.
+that Orca stores with the workspace's SSH target, and it does not expire: Orca keeps dialing the
+target it saved at create and never takes a new one on wake. It dies with the machine.
+
+## Verified
+
+`e2e/instabox-recipe.spec.ts` drives a real Orca build against real Instabox: create from the
+"Run on" picker, Orca installs its server on the machine, sleep suspends the machine, wake resumes
+it and reconnects, delete removes the machine. Copy it into an Orca checkout's `tests/e2e` and see
+its header for the environment it needs.
 
 ## Develop
 
