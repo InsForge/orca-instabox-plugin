@@ -1,17 +1,24 @@
 {
   "manifestVersion": 1,
   "id": "instabox",
-  "publisher": "v01dstar",
+  "publisher": "insforge",
   "name": "Instabox",
   "version": "0.1.0",
   "description": "Run each Orca workspace on its own Instabox cloud machine: created with the workspace, paused when it sleeps, deleted with it.",
-  "author": { "name": "v01dstar", "url": "https://github.com/v01dstar" },
+  "author": {
+    "name": "InsForge",
+    "url": "https://github.com/InsForge"
+  },
   "repository": "https://github.com/InsForge/orca-instabox-plugin",
-  "engines": { "orca": ">=1.4.160" },
+  "engines": {
+    "orca": ">=1.4.160"
+  },
   "pluginApi": 1,
   "contributes": {
     "vmRecipes": [
-      { "path": "recipes/instabox.json" }
+      {
+        "path": "recipes/instabox.json"
+      }
     ]
   }
 }
