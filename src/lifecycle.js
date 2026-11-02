@@ -20,7 +20,8 @@ const fail = (message) => {
 const run = (args, options) => {
   const result = cp.spawnSync('instabox', args, {
     encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: [options && options.input !== undefined ? 'pipe' : 'ignore', 'pipe', 'pipe'],
+    input: options && options.input,
     env: Object.assign({}, env, (options && options.env) || {}),
     timeout: ((options && options.timeoutSeconds) || 900) * 1000,
     windowsHide: true
@@ -160,6 +161,15 @@ const connectionResult = (machineId, machineName, projectRoot) => {
 // Secrets reach the machine as placeholders; Instabox's proxy adds the real value only for their hosts.
 // GH_TOKEN clones private repositories, the others sign in Claude Code and Codex.
 const SECRET_NAMES = ['GH_TOKEN', 'CLAUDE_CODE_OAUTH_TOKEN', 'OPENAI_API_KEY'];
+// Runs on the machine with node; ~ stands for a quote, which this file cannot spell.
+const CLAUDE_ONBOARDED = [
+  'const fs = require(~fs~);',
+  'const file = require(~os~).homedir() + ~/.claude.json~;',
+  'let config = {};',
+  'try { config = JSON.parse(fs.readFileSync(file, ~utf8~)); } catch (error) {}',
+  'config.hasCompletedOnboarding = true;',
+  'fs.writeFileSync(file, JSON.stringify(config, null, 2));'
+].join(NL).split('~').join(QUOTE);
 const agentSecrets = () => {
   const result = run(['secrets', 'ls', '--json'], { quiet: true });
   if (result.status !== 0) {
@@ -206,6 +216,10 @@ const create = () => {
     // Codex keeps its API key in ~/.codex/auth.json rather than reading the environment.
     if (secrets.includes('OPENAI_API_KEY')) {
       remote(machineId, 'printenv OPENAI_API_KEY | codex login --with-api-key', [], { quiet: true });
+    }
+    // The token signs Claude Code in, but interactive claude still opens its first-run login flow until onboarding is marked done.
+    if (secrets.includes('CLAUDE_CODE_OAUTH_TOKEN')) {
+      remote(machineId, 'node', ['--stdin'], { quiet: true, input: CLAUDE_ONBOARDED });
     }
     log('Cloning ' + withoutCredentials(repoUrl) + ' into ' + projectRoot + '.');
     const clone = remote(
