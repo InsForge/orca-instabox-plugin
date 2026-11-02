@@ -12,7 +12,7 @@
   },
   "repository": "https://github.com/InsForge/orca-instabox-plugin",
   "engines": {
-    "orca": ">=1.4.160"
+    "orca": ">=1.4.228"
   },
   "pluginApi": 1,
   "contributes": {
