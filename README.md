@@ -85,9 +85,14 @@ The recipe files can only hold commands, so `scripts/build-recipes.mjs` inlines
 node scripts/build-recipes.mjs
 ```
 
+Check it the way Orca loads it (Orca 1.4.246 or later ships this command):
+
+```sh
+orca plugin validate .
+```
+
 To load your copy in Orca, add this folder under Settings → Plugins → Development, then refresh the
-plugin list after each build. An Orca CLI built from a recent Orca source tree can also check the
-manifest with `orca plugin validate .`; released Orca CLIs do not have the `plugin` command yet.
+plugin list after each build.
 
 `src/lifecycle.js` must avoid `"`, `$`, backticks, backslashes and `%`, because the same command
 runs under `sh` and `cmd.exe`, and needs a semicolon after every statement. The build checks both.
