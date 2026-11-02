@@ -78,7 +78,7 @@ const originUrl = () => {
   return result.status === 0 ? result.stdout.trim() : '';
 };
 
-// The machine has no SSH key for the Git host, so clone over HTTPS with the Vault GH_TOKEN instead.
+// The machine has no SSH key for the Git host, so clone over HTTPS with the GH_TOKEN Secret instead.
 const httpsCloneUrl = (url) => {
   if (url.startsWith('https://') || url.startsWith('http://')) {
     return url;
@@ -165,7 +165,15 @@ const create = () => {
   const name = machineName(env.ORCA_WORKSPACE_NAME, env.ORCA_VM_INSTANCE_ID);
   const createArgs = ['create', '--name', name, '--meta', 'orca-instance=' + (env.ORCA_VM_INSTANCE_ID || name)];
   log('Creating machine ' + name + '.');
-  must(createArgs);
+  // The GH_TOKEN Secret lets the machine clone private repositories. Without one, or on CLIs
+  // older than Secrets, create refuses the selection before making anything, so retry without it.
+  if (run(createArgs.concat(['--secrets', 'GH_TOKEN']), { quiet: true }).status !== 0) {
+    if (machineState(name) !== 'gone') {
+      removeMachine(name);
+      fail('Could not create Instabox machine ' + name + '.');
+    }
+    must(createArgs);
+  }
   let machineId = name;
   try {
     machineId = JSON.parse(must(['get', name, '--json'])).id || name;
@@ -184,7 +192,7 @@ const create = () => {
       { timeoutSeconds: 660 }
     );
     if (clone.status !== 0) {
-      throw new Error('git clone failed on the machine. For a private repository, add a GitHub token named GH_TOKEN to your Instabox Vault so new machines can clone it.');
+      throw new Error('git clone failed on the machine. For a private repository, save a GitHub token as an Instabox Secret named GH_TOKEN for github.com, for example: gh auth token | instabox secrets set GH_TOKEN --host github.com --host api.github.com');
     }
     process.stdout.write(JSON.stringify(connectionResult(machineId, name, projectRoot)) + NL);
   } catch (error) {

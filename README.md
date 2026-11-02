@@ -22,8 +22,14 @@ If any create step fails, the machine is deleted again.
 - `node` on `PATH`: the recipe commands run `node -e`.
 - A repository with an `origin` remote. SSH remotes (`git@github.com:org/repo.git`) are cloned as
   HTTPS, because the machine has no SSH key for your Git host.
-- For a private repository, a GitHub token named `GH_TOKEN` in your Instabox Vault, so new machines
-  can clone it (`instabox vault --help`).
+- For a private repository, a GitHub token saved as an Instabox Secret named `GH_TOKEN`. Each new
+  machine selects it, and Instabox's proxy adds the real token only to requests to GitHub:
+
+  ```sh
+  gh auth token | instabox secrets set GH_TOKEN --host github.com --host api.github.com
+  ```
+
+  A fine-grained token with read access to just the repositories you use works too.
 
 ## How it connects
 
