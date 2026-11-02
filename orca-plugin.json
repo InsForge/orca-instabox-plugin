@@ -5,6 +5,7 @@
   "name": "Instabox",
   "version": "0.1.0",
   "description": "Run each Orca workspace on its own Instabox cloud machine: created with the workspace, paused when it sleeps, deleted with it.",
+  "icon": "assets/icon.png",
   "author": {
     "name": "InsForge",
     "url": "https://github.com/InsForge"
