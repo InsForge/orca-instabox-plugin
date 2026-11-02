@@ -4,9 +4,13 @@
   "id": "instabox",
   "publisher": "insforge",
   "name": "Instabox",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Run each Orca workspace on its own Instabox cloud machine: created with the workspace, paused when it sleeps, deleted with it.",
   "icon": "assets/icon.png",
+  "cover": {
+    "path": "assets/cover.png",
+    "alt": "A glowing black Instabox cube above the line Cloud Computers for AI Agents"
+  },
   "author": {
     "name": "InsForge",
     "url": "https://github.com/InsForge"
