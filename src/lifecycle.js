@@ -27,7 +27,7 @@ const run = (args, options) => {
   });
   if (result.error) {
     if (result.error.code === 'ENOENT') {
-      fail('The instabox CLI is not on PATH. Install it from https://instabox.sh, run instabox login, then restart Orca.');
+      fail('The instabox CLI is not on PATH. Run npx instabox@latest in a terminal to sign in and install it, then restart Orca.');
     }
     fail('instabox ' + args[0] + ': ' + result.error.message);
   }

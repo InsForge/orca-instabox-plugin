@@ -14,11 +14,25 @@ What each workspace does:
 
 If any create step fails, the machine is deleted again.
 
+## Before you start
+
+The plugin drives the `instabox` CLI on your computer and does not install it. Run this once in a
+terminal; it signs you in and puts the CLI on your `PATH`:
+
+```sh
+npx instabox@latest
+```
+
+It also installs Instabox's agent skills for Claude Code, Codex and others; add `--no-skills` to
+skip them. Restart Orca afterwards so it sees the new `PATH`. On Windows, add the folder the
+command prints to your `PATH` first.
+
+Then turn on Orca's per-workspace environments: Settings → Experimental → Cloud VM
+(`experimentalEphemeralVms`). Until then the recipe does not show in "Run on".
+
 ## Requirements
 
-- Orca's per-workspace environments turned on: Settings → Experimental → per-workspace
-  environments (`experimentalEphemeralVms`). Until then the recipes do not show in "Run on".
-- The `instabox` CLI on `PATH`, signed in (`instabox login`).
+- The `instabox` CLI on `PATH`, signed in (see above).
 - `node` on `PATH`: the recipe commands run `node -e`.
 - A repository with an `origin` remote. SSH remotes (`git@github.com:org/repo.git`) are cloned as
   HTTPS, because the machine has no SSH key for your Git host.
