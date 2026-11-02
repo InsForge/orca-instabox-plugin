@@ -216,7 +216,7 @@ const checkoutWorkspaceBranch = (machineId, repoUrl, projectRoot) => {
 const create = () => {
   // The recipe declares provisioned-root, so Orca asks for result schema 2; never fall back to a worktree.
   if (env.ORCA_RECIPE_RESULT_SCHEMA_VERSION !== '2') {
-    fail('This Orca did not ask for a provisioned-root result. Update Orca to 1.4.228 or later.');
+    fail('This Orca did not ask for a provisioned-root result. Update Orca to 1.4.245 or later.');
   }
   const repoUrl = httpsCloneUrl(env.ORCA_REPO_URL || originUrl());
   if (!repoUrl) {

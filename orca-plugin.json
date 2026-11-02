@@ -1,5 +1,6 @@
 {
-  "manifestVersion": 1,
+  "manifestVersion": 2,
+  "execution": "declarative",
   "id": "instabox",
   "publisher": "insforge",
   "name": "Instabox",
@@ -11,10 +12,10 @@
     "url": "https://github.com/InsForge"
   },
   "repository": "https://github.com/InsForge/orca-instabox-plugin",
+  "license": "MIT",
   "engines": {
-    "orca": ">=1.4.228"
+    "orca": ">=1.4.245"
   },
-  "pluginApi": 1,
   "contributes": {
     "vmRecipes": [
       {

@@ -37,8 +37,7 @@ Then turn on Orca's per-workspace environments: Settings → Experimental → Cl
 
 ## Requirements
 
-- Orca 1.4.228 or later. Earlier releases connect the machine without Orca's server on it, and newer
-  Orca cannot delete such a workspace later.
+- Orca 1.4.245 or later, the first to read this plugin's manifest format.
 - The `instabox` CLI on `PATH`, signed in (see above).
 - `node` on `PATH`: the recipe commands run `node -e`.
 - A repository with an `origin` remote. SSH remotes (`git@github.com:org/repo.git`) are cloned as
