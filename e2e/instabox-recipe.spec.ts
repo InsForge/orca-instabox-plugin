@@ -7,7 +7,6 @@ import { homedir, tmpdir } from 'node:os'
 import path from 'node:path'
 import type { Page } from '@stablyai/playwright-test'
 import { expect, test } from './helpers/orca-app'
-import { removeWorktreeViaStore } from './helpers/dead-terminal'
 import { enableDevPlugins } from './helpers/plugin-smoke'
 import { openSidebarWorkspaceComposer } from './helpers/sidebar-project-dialog'
 import { activateWorkspaceByClick, sleepWorkspaceViaSidebar } from './helpers/slept-workspace-probe'
@@ -120,6 +119,13 @@ test('runs a workspace on an Instabox machine through its whole life', async ({ 
     expect(machine?.state).toBe('running')
     expect(workspace.hostId).toBeTruthy()
     expect(workspace.path.startsWith('/data/home/')).toBe(true)
+    // Provisioned root: the machine's clone is the workspace, with no second worktree beside it.
+    const machineWorkspaces = await orcaPage.evaluate(
+      (repoId) => window.__store!.getState().worktreesByRepo[repoId]?.length ?? 0,
+      workspace.repoId
+    )
+    expect(machineWorkspaces).toBe(1)
+    expect(workspace.isMainWorktree).toBe(true)
     expect(remoteGit(machine.id, `git -C ${workspace.path} branch --show-current`)).toBe(
       workspace.branch.replace(/^refs\/heads\//, '')
     )
@@ -148,7 +154,11 @@ test('runs a workspace on an Instabox machine through its whole life', async ({ 
     })
 
     await test.step('delete removes the machine', async () => {
-      await removeWorktreeViaStore(orcaPage, workspace.id)
+      // The clone is the project's primary checkout, so the sidebar offers Remove Project from Orca.
+      await orcaPage.evaluate(
+        ({ repoId, hostId }) => window.__store!.getState().removeProject(repoId, { hostId }),
+        { repoId: workspace.repoId, hostId: workspace.hostId! }
+      )
       await expect
         .poll(() => machineState(machinePrefix), { timeout: 180_000, intervals: [3_000] })
         .toBe('gone')

@@ -40,6 +40,7 @@ for (const { file, ...recipe } of recipes) {
   const artifact = {
     schemaVersion: 1,
     ...recipe,
+    checkoutMode: 'provisioned-root',
     create: command,
     suspend: command,
     resume: command,

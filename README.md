@@ -7,8 +7,11 @@ default Instabox template.
 What each workspace does:
 
 - **Create**: makes a machine named `orca-<workspace>-<id>`, clones the repository's `origin`
-  remote into the machine's home over HTTPS, and hands Orca an SSH connection. Orca installs its
-  server on the machine and creates the workspace's worktree there.
+  remote into the machine's home over HTTPS, checks out the workspace's branch at the start commit
+  you picked, and hands Orca an SSH connection. That clone is the workspace itself
+  (`checkoutMode: provisioned-root`), so each machine shows one workspace and no second worktree.
+  The start commit has to be pushed, because the machine fetches it from the Git host. Orca
+  installs its server on the machine.
 - **Sleep / wake**: suspends and resumes the machine; the workspace reconnects with the same token.
 - **Delete**: deletes the machine, which also revokes its SSH tokens.
 

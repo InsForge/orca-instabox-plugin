@@ -140,10 +140,14 @@ const removeMachine = (machineId) => {
 };
 
 // The token is the SSH user name the gateway authenticates with the none method; it dies with the machine.
+// Provisioned root: the clone is the workspace itself, so Orca adds no second worktree beside it.
+const PROVISIONED_ROOT = env.ORCA_RECIPE_RESULT_SCHEMA_VERSION === '2';
+
 const connectionResult = (machineId, machineName, projectRoot) => {
   const token = JSON.parse(must(['ssh-token', machineId, '--ttl', 'never', '--json']));
+  const shape = PROVISIONED_ROOT ? { schemaVersion: 2, checkoutMode: 'provisioned-root' } : { schemaVersion: 1 };
   return {
-    schemaVersion: 1,
+    ...shape,
     connection: {
       type: 'ssh',
       projectRoot: projectRoot,
@@ -180,6 +184,33 @@ const agentSecrets = () => {
     return SECRET_NAMES.filter((secret) => saved.includes(secret));
   } catch (error) {
     return [];
+  }
+};
+
+// Put the workspace's branch at the exact commit Orca resolved, which a moving ref could not promise.
+const checkoutWorkspaceBranch = (machineId, repoUrl, projectRoot) => {
+  const branch = env.ORCA_REPO_BRANCH;
+  const head = env.ORCA_REPO_REF_HEAD;
+  if (!branch || !head) {
+    throw new Error('Orca did not pass the workspace branch and start commit.');
+  }
+  const git = 'git -C ' + shellQuote(projectRoot) + ' ';
+  const fetchFlags = ['--timeout', '600', '--env', 'GIT_TERMINAL_PROMPT=0'];
+  const fetchOptions = { quiet: true, timeoutSeconds: 660 };
+  const url = env.ORCA_REPO_URL || repoUrl;
+  if (env.ORCA_REPO_REF) {
+    remote(machineId, git + 'fetch --quiet -- ' + shellQuote(url) + ' ' + shellQuote(env.ORCA_REPO_REF), fetchFlags, fetchOptions);
+  }
+  if (remote(machineId, git + 'cat-file -e ' + shellQuote(head + '^{commit}'), [], { quiet: true }).status !== 0) {
+    remote(machineId, git + 'fetch --quiet -- ' + shellQuote(url) + ' ' + shellQuote(head), fetchFlags, fetchOptions);
+  }
+  if (remote(machineId, git + 'cat-file -e ' + shellQuote(head + '^{commit}'), [], { quiet: true }).status !== 0) {
+    throw new Error('The start commit ' + head.slice(0, 12) + ' is not on the Git host. Push it, then create the workspace again.');
+  }
+  log('Checking out ' + branch + ' at ' + head.slice(0, 12) + '.');
+  const checkout = remote(machineId, git + 'checkout --quiet -B ' + shellQuote(branch) + ' ' + shellQuote(head));
+  if (checkout.status !== 0) {
+    throw new Error('Could not check out ' + branch + ' on the machine.');
   }
 };
 
@@ -230,6 +261,9 @@ const create = () => {
     );
     if (clone.status !== 0) {
       throw new Error('git clone failed on the machine. For a private repository, save a GitHub token as an Instabox Secret named GH_TOKEN for github.com, for example: gh auth token | instabox secrets set GH_TOKEN --host github.com --host api.github.com');
+    }
+    if (PROVISIONED_ROOT) {
+      checkoutWorkspaceBranch(machineId, repoUrl, projectRoot);
     }
     process.stdout.write(JSON.stringify(connectionResult(machineId, name, projectRoot)) + NL);
   } catch (error) {
