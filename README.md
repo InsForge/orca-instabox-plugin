@@ -13,7 +13,9 @@ What each workspace does:
   The start commit has to be pushed, because the machine fetches it from the Git host. Orca
   installs its server on the machine.
 - **Sleep / wake**: suspends and resumes the machine; the workspace reconnects with the same token.
-- **Delete**: deletes the machine, which also revokes its SSH tokens.
+- **Delete**: right-click the workspace and choose **Remove Project from Orca**. That deletes the
+  machine, which also revokes its SSH token. The workspace is the project's primary checkout, so
+  Delete Worktree stays disabled.
 
 If any create step fails, the machine is deleted again.
 
@@ -73,9 +75,10 @@ target it saved at create and never takes a new one on wake. It dies with the ma
 ## Verified
 
 - `e2e/instabox-recipe.spec.ts` drives a real Orca build against real Instabox: create from the
-  "Run on" picker, Orca installs its server on the machine, sleep suspends the machine, wake
-  resumes it and reconnects, delete removes the machine. Copy it into an Orca checkout's
-  `tests/e2e` and see its header for the environment it needs.
+  "Run on" picker, the machine holds one workspace on the chosen branch, Orca installs its server
+  there, sleep suspends the machine, wake resumes it and reconnects, and removing the project
+  deletes the machine. Copy it into an Orca checkout's `tests/e2e` and see its header for the
+  environment it needs.
 - Running the recipe command directly against real Instabox, outside Orca: a private repository
   clones with the `GH_TOKEN` Secret, and `claude -p` answers on the machine with the
   `CLAUDE_CODE_OAUTH_TOKEN` Secret.

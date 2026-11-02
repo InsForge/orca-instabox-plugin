@@ -22,7 +22,7 @@ const run = (args, options) => {
     encoding: 'utf8',
     stdio: [options && options.input !== undefined ? 'pipe' : 'ignore', 'pipe', 'pipe'],
     input: options && options.input,
-    env: Object.assign({}, env, (options && options.env) || {}),
+    env: env,
     timeout: ((options && options.timeoutSeconds) || 900) * 1000,
     windowsHide: true
   });
@@ -139,15 +139,13 @@ const removeMachine = (machineId) => {
   return machineState(machineId) === 'gone';
 };
 
-// The token is the SSH user name the gateway authenticates with the none method; it dies with the machine.
 // Provisioned root: the clone is the workspace itself, so Orca adds no second worktree beside it.
-const PROVISIONED_ROOT = env.ORCA_RECIPE_RESULT_SCHEMA_VERSION === '2';
-
+// The token is the SSH user name the gateway authenticates with the none method; it dies with the machine.
 const connectionResult = (machineId, machineName, projectRoot) => {
   const token = JSON.parse(must(['ssh-token', machineId, '--ttl', 'never', '--json']));
-  const shape = PROVISIONED_ROOT ? { schemaVersion: 2, checkoutMode: 'provisioned-root' } : { schemaVersion: 1 };
   return {
-    ...shape,
+    schemaVersion: 2,
+    checkoutMode: 'provisioned-root',
     connection: {
       type: 'ssh',
       projectRoot: projectRoot,
@@ -165,15 +163,6 @@ const connectionResult = (machineId, machineName, projectRoot) => {
 // Secrets reach the machine as placeholders; Instabox's proxy adds the real value only for their hosts.
 // GH_TOKEN clones private repositories, the others sign in Claude Code and Codex.
 const SECRET_NAMES = ['GH_TOKEN', 'CLAUDE_CODE_OAUTH_TOKEN', 'OPENAI_API_KEY'];
-// Runs on the machine with node; ~ stands for a quote, which this file cannot spell.
-const CLAUDE_ONBOARDED = [
-  'const fs = require(~fs~);',
-  'const file = require(~os~).homedir() + ~/.claude.json~;',
-  'let config = {};',
-  'try { config = JSON.parse(fs.readFileSync(file, ~utf8~)); } catch (error) {}',
-  'config.hasCompletedOnboarding = true;',
-  'fs.writeFileSync(file, JSON.stringify(config, null, 2));'
-].join(NL).split('~').join(QUOTE);
 const agentSecrets = () => {
   const result = run(['secrets', 'ls', '--json'], { quiet: true });
   if (result.status !== 0) {
@@ -186,6 +175,16 @@ const agentSecrets = () => {
     return [];
   }
 };
+
+// Runs on the machine with node; ~ stands for a quote, which this file cannot spell.
+const CLAUDE_ONBOARDED = [
+  'const fs = require(~fs~);',
+  'const file = require(~os~).homedir() + ~/.claude.json~;',
+  'let config = {};',
+  'try { config = JSON.parse(fs.readFileSync(file, ~utf8~)); } catch (error) {}',
+  'config.hasCompletedOnboarding = true;',
+  'fs.writeFileSync(file, JSON.stringify(config, null, 2));'
+].join(NL).split('~').join(QUOTE);
 
 // Put the workspace's branch at the exact commit Orca resolved, which a moving ref could not promise.
 const checkoutWorkspaceBranch = (machineId, repoUrl, projectRoot) => {
@@ -215,6 +214,10 @@ const checkoutWorkspaceBranch = (machineId, repoUrl, projectRoot) => {
 };
 
 const create = () => {
+  // The recipe declares provisioned-root, so Orca asks for result schema 2; never fall back to a worktree.
+  if (env.ORCA_RECIPE_RESULT_SCHEMA_VERSION !== '2') {
+    fail('This Orca did not ask for a provisioned-root result. Update Orca to 1.4.228 or later.');
+  }
   const repoUrl = httpsCloneUrl(env.ORCA_REPO_URL || originUrl());
   if (!repoUrl) {
     fail('Instabox clones the repository from its origin remote over HTTPS, and this repository has none. Push it to a Git host first.');
@@ -262,9 +265,7 @@ const create = () => {
     if (clone.status !== 0) {
       throw new Error('git clone failed on the machine. For a private repository, save a GitHub token as an Instabox Secret named GH_TOKEN for github.com, for example: gh auth token | instabox secrets set GH_TOKEN --host github.com --host api.github.com');
     }
-    if (PROVISIONED_ROOT) {
-      checkoutWorkspaceBranch(machineId, repoUrl, projectRoot);
-    }
+    checkoutWorkspaceBranch(machineId, repoUrl, projectRoot);
     process.stdout.write(JSON.stringify(connectionResult(machineId, name, projectRoot)) + NL);
   } catch (error) {
     log(error.message);
