@@ -33,13 +33,6 @@ const recipes = [
     name: 'Instabox',
     description:
       'A new Instabox cloud machine for each workspace, from the default template. Needs the instabox CLI, signed in.'
-  },
-  {
-    file: 'instabox-orca-template.json',
-    id: 'instabox-orca-template',
-    name: 'Instabox (Orca template)',
-    description:
-      'A new Instabox cloud machine for each workspace, from the orca template (paid plans). Needs the instabox CLI, signed in.'
   }
 ]
 

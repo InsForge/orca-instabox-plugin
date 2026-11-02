@@ -154,9 +154,6 @@ const create = () => {
   }
   const name = machineName(env.ORCA_WORKSPACE_NAME, env.ORCA_VM_INSTANCE_ID);
   const createArgs = ['create', '--name', name, '--meta', 'orca-instance=' + (env.ORCA_VM_INSTANCE_ID || name)];
-  if (env.ORCA_RECIPE_ID === 'instabox-orca-template') {
-    createArgs.push('--template', 'orca');
-  }
   log('Creating machine ' + name + '.');
   must(createArgs);
   let machineId = name;

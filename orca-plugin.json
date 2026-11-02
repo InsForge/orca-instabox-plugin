@@ -11,8 +11,7 @@
   "pluginApi": 1,
   "contributes": {
     "vmRecipes": [
-      { "path": "recipes/instabox.json" },
-      { "path": "recipes/instabox-orca-template.json" }
+      { "path": "recipes/instabox.json" }
     ]
   }
 }

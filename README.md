@@ -1,12 +1,8 @@
 # Instabox for Orca
 
-Run each Orca workspace on its own [Instabox](https://instabox.sh) cloud machine. The plugin adds
-two environment recipes to the new-workspace "Run on" picker:
-
-| Recipe | Machine |
-| --- | --- |
-| **Instabox** | Instabox's default template. Works on every plan. |
-| **Instabox (Orca template)** | The `orca` template. Needs a paid plan. |
+Run each Orca workspace on its own [Instabox](https://instabox.sh) cloud machine. The plugin adds an
+**Instabox** environment recipe to the new-workspace "Run on" picker. Machines use your account's
+default Instabox template.
 
 What each workspace does:
 
