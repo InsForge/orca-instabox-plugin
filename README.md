@@ -53,7 +53,7 @@ are signed in without copying a real credential there:
 | Secret | Signs in | Save it with |
 | --- | --- | --- |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code, on your Claude subscription | `claude setup-token`, then `instabox secrets set CLAUDE_CODE_OAUTH_TOKEN --ai anthropic` |
-| `OPENAI_API_KEY` | Codex, billed to the API key | `instabox secrets set OPENAI_API_KEY --ai openai` |
+| `OPENAI_API_KEY` | Codex, billed to the API key (not yet verified with a real key) | `instabox secrets set OPENAI_API_KEY --ai openai` |
 
 Codex's ChatGPT sign-in cannot travel this way, because its tokens rotate; run
 `codex login --device-auth` on the machine instead.
@@ -67,21 +67,27 @@ target it saved at create and never takes a new one on wake. It dies with the ma
 
 ## Verified
 
-`e2e/instabox-recipe.spec.ts` drives a real Orca build against real Instabox: create from the
-"Run on" picker, Orca installs its server on the machine, sleep suspends the machine, wake resumes
-it and reconnects, delete removes the machine. Copy it into an Orca checkout's `tests/e2e` and see
-its header for the environment it needs.
+- `e2e/instabox-recipe.spec.ts` drives a real Orca build against real Instabox: create from the
+  "Run on" picker, Orca installs its server on the machine, sleep suspends the machine, wake
+  resumes it and reconnects, delete removes the machine. Copy it into an Orca checkout's
+  `tests/e2e` and see its header for the environment it needs.
+- Running the recipe command directly against real Instabox, outside Orca: a private repository
+  clones with the `GH_TOKEN` Secret, and `claude -p` answers on the machine with the
+  `CLAUDE_CODE_OAUTH_TOKEN` Secret.
+- Not verified: Codex with a real `OPENAI_API_KEY`, and Windows.
 
 ## Develop
 
 The recipe files can only hold commands, so `scripts/build-recipes.mjs` inlines
-`src/lifecycle.js` into `node -e "..."` for all four phases. Edit `src/lifecycle.js`, then:
+`src/lifecycle.js` into `node -e "..."` for all four phases. Edit `src/lifecycle.js`, then run:
 
 ```sh
 node scripts/build-recipes.mjs
-orca plugin validate .
-orca plugin dev load .
 ```
+
+To load your copy in Orca, add this folder under Settings → Plugins → Development, then refresh the
+plugin list after each build. An Orca CLI built from a recent Orca source tree can also check the
+manifest with `orca plugin validate .`; released Orca CLIs do not have the `plugin` command yet.
 
 `src/lifecycle.js` must avoid `"`, `$`, backticks, backslashes and `%`, because the same command
 runs under `sh` and `cmd.exe`, and needs a semicolon after every statement. The build checks both.
