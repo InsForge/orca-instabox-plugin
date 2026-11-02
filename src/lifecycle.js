@@ -121,11 +121,21 @@ const readPayload = () => {
 const machineState = (machineId) => {
   const result = run(['get', machineId, '--json'], { quiet: true });
   if (result.status !== 0) {
-    const missing = ['no sandbox with', 'not_found', 'not found'].some((text) => result.stderr.includes(text));
+    // Newer CLIs print the --json error on stdout, older ones on stderr.
+    const output = (result.stdout || '') + (result.stderr || '');
+    const missing = ['no sandbox with', 'not_found', 'not found'].some((text) => output.includes(text));
     return missing ? 'gone' : 'unknown';
   }
   const machine = JSON.parse(result.stdout);
   return String(machine.state || machine.status || 'unknown').toLowerCase();
+};
+
+// Newer CLIs refuse rm without a terminal unless --yes; older ones reject --yes.
+const removeMachine = (machineId) => {
+  if (run(['rm', machineId, '--yes']).status === 0 || run(['rm', machineId]).status === 0) {
+    return true;
+  }
+  return machineState(machineId) === 'gone';
 };
 
 // The token is the SSH user name the gateway authenticates with the none method; it dies with the machine.
@@ -180,7 +190,7 @@ const create = () => {
   } catch (error) {
     log(error.message);
     log('Deleting ' + name + ' after the failed create.');
-    run(['rm', machineId]);
+    removeMachine(machineId);
     process.exit(1);
   }
 };
@@ -201,7 +211,7 @@ const resume = () => {
 
 const destroy = () => {
   const { machineId } = readPayload();
-  if (run(['rm', machineId]).status !== 0 && machineState(machineId) !== 'gone') {
+  if (!removeMachine(machineId)) {
     fail('Could not delete Instabox machine ' + machineId + '.');
   }
 };

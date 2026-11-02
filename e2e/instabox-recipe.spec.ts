@@ -155,7 +155,7 @@ test('runs a workspace on an Instabox machine through its whole life', async ({ 
     })
   } finally {
     for (const leftover of machinesNamed(machinePrefix)) {
-      execFileSync('instabox', ['rm', leftover.id])
+      execFileSync('instabox', ['rm', leftover.id, '--yes'])
     }
     rmSync(repoParent, { recursive: true, force: true })
   }
