@@ -157,6 +157,22 @@ const connectionResult = (machineId, machineName, projectRoot) => {
   };
 };
 
+// Secrets reach the machine as placeholders; Instabox's proxy adds the real value only for their hosts.
+// GH_TOKEN clones private repositories, the others sign in Claude Code and Codex.
+const SECRET_NAMES = ['GH_TOKEN', 'CLAUDE_CODE_OAUTH_TOKEN', 'OPENAI_API_KEY'];
+const agentSecrets = () => {
+  const result = run(['secrets', 'ls', '--json'], { quiet: true });
+  if (result.status !== 0) {
+    return [];
+  }
+  try {
+    const saved = (JSON.parse(result.stdout).items || []).map((item) => item.name);
+    return SECRET_NAMES.filter((secret) => saved.includes(secret));
+  } catch (error) {
+    return [];
+  }
+};
+
 const create = () => {
   const repoUrl = httpsCloneUrl(env.ORCA_REPO_URL || originUrl());
   if (!repoUrl) {
@@ -165,10 +181,13 @@ const create = () => {
   const name = machineName(env.ORCA_WORKSPACE_NAME, env.ORCA_VM_INSTANCE_ID);
   const createArgs = ['create', '--name', name, '--meta', 'orca-instance=' + (env.ORCA_VM_INSTANCE_ID || name)];
   log('Creating machine ' + name + '.');
-  // The GH_TOKEN Secret lets the machine clone private repositories. Without one, or on CLIs
-  // older than Secrets, create refuses the selection before making anything, so retry without it.
-  if (run(createArgs.concat(['--secrets', 'GH_TOKEN']), { quiet: true }).status !== 0) {
-    if (machineState(name) !== 'gone') {
+  const secrets = agentSecrets();
+  if (secrets.length > 0) {
+    log('Selecting Instabox Secrets ' + secrets.join(', ') + '.');
+  }
+  // create refuses a bad selection before making anything, so a retry without it is safe.
+  if (secrets.length === 0 || run(createArgs.concat(['--secrets', secrets.join(',')]), { quiet: true }).status !== 0) {
+    if (secrets.length > 0 && machineState(name) !== 'gone') {
       removeMachine(name);
       fail('Could not create Instabox machine ' + name + '.');
     }
@@ -184,6 +203,10 @@ const create = () => {
     }
     const projectRoot = home + '/' + repoDirName(repoUrl);
     remote(machineId, 'gh auth setup-git', [], { quiet: true });
+    // Codex keeps its API key in ~/.codex/auth.json rather than reading the environment.
+    if (secrets.includes('OPENAI_API_KEY')) {
+      remote(machineId, 'printenv OPENAI_API_KEY | codex login --with-api-key', [], { quiet: true });
+    }
     log('Cloning ' + withoutCredentials(repoUrl) + ' into ' + projectRoot + '.');
     const clone = remote(
       machineId,

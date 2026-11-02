@@ -45,6 +45,19 @@ Then turn on Orca's per-workspace environments: Settings → Experimental → Cl
 
   A fine-grained token with read access to just the repositories you use works too.
 
+## Signing in agents on the machine
+
+New machines also select these Instabox Secrets when you have saved them, so agents on the machine
+are signed in without copying a real credential there:
+
+| Secret | Signs in | Save it with |
+| --- | --- | --- |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code, on your Claude subscription | `claude setup-token`, then `instabox secrets set CLAUDE_CODE_OAUTH_TOKEN --ai anthropic` |
+| `OPENAI_API_KEY` | Codex, billed to the API key | `instabox secrets set OPENAI_API_KEY --ai openai` |
+
+Codex's ChatGPT sign-in cannot travel this way, because its tokens rotate; run
+`codex login --device-auth` on the machine instead.
+
 ## How it connects
 
 Each workspace gets an Instabox SSH token (`instabox ssh-token`) and Orca dials
