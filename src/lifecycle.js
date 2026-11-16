@@ -177,13 +177,19 @@ const agentSecrets = () => {
 };
 
 // Runs on the machine with node; ~ stands for a quote, which this file cannot spell.
-const CLAUDE_ONBOARDED = [
+// Only instabox exec and login shells see the Secret, and Orca connects over plain SSH, so the
+// placeholder also goes into ~/.claude/settings.json, whose env Claude Code applies in any shell.
+const CLAUDE_SETUP = [
   'const fs = require(~fs~);',
-  'const file = require(~os~).homedir() + ~/.claude.json~;',
-  'let config = {};',
-  'try { config = JSON.parse(fs.readFileSync(file, ~utf8~)); } catch (error) {}',
+  'const home = require(~os~).homedir();',
+  'const readJson = (file) => { try { return JSON.parse(fs.readFileSync(file, ~utf8~)); } catch (error) { if (error.code === ~ENOENT~) { return {}; } throw error; } };',
+  'const config = readJson(home + ~/.claude.json~);',
   'config.hasCompletedOnboarding = true;',
-  'fs.writeFileSync(file, JSON.stringify(config, null, 2));'
+  'fs.writeFileSync(home + ~/.claude.json~, JSON.stringify(config, null, 2));',
+  'const settings = readJson(home + ~/.claude/settings.json~);',
+  'settings.env = Object.assign({}, settings.env, { CLAUDE_CODE_OAUTH_TOKEN: process.env.CLAUDE_CODE_OAUTH_TOKEN });',
+  'fs.mkdirSync(home + ~/.claude~, { recursive: true });',
+  'fs.writeFileSync(home + ~/.claude/settings.json~, JSON.stringify(settings, null, 2));'
 ].join(NL).split('~').join(QUOTE);
 
 // Put the workspace's branch at the exact commit Orca resolved, which a moving ref could not promise.
@@ -246,6 +252,13 @@ const create = () => {
       throw new Error('Could not read the home directory of ' + name + '.');
     }
     const projectRoot = home + '/' + repoDirName(repoUrl);
+    // Plain SSH sessions have no GH_TOKEN, so store its placeholder in gh's own config; gh refuses to log in while it is set.
+    if (secrets.includes('GH_TOKEN')) {
+      const ghLogin = remote(machineId, 'printenv GH_TOKEN | env -u GH_TOKEN gh auth login --hostname github.com --git-protocol https --with-token');
+      if (ghLogin.status !== 0) {
+        throw new Error('Could not sign gh in with the GH_TOKEN Secret on the machine.');
+      }
+    }
     remote(machineId, 'gh auth setup-git', [], { quiet: true });
     // Codex keeps its API key in ~/.codex/auth.json rather than reading the environment.
     if (secrets.includes('OPENAI_API_KEY')) {
@@ -253,7 +266,9 @@ const create = () => {
     }
     // The token signs Claude Code in, but interactive claude still opens its first-run login flow until onboarding is marked done.
     if (secrets.includes('CLAUDE_CODE_OAUTH_TOKEN')) {
-      remote(machineId, 'node', ['--stdin'], { quiet: true, input: CLAUDE_ONBOARDED });
+      if (remote(machineId, 'node', ['--stdin'], { input: CLAUDE_SETUP }).status !== 0) {
+        log('Could not sign Claude Code in for SSH sessions; it signs in only from login shells on this machine.');
+      }
     }
     log('Cloning ' + withoutCredentials(repoUrl) + ' into ' + projectRoot + '.');
     const clone = remote(
