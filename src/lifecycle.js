@@ -254,7 +254,7 @@ const create = () => {
     const projectRoot = home + '/' + repoDirName(repoUrl);
     // Plain SSH sessions have no GH_TOKEN, so store its placeholder in gh's own config; gh refuses to log in while it is set.
     if (secrets.includes('GH_TOKEN')) {
-      const ghLogin = remote(machineId, 'printenv GH_TOKEN | env -u GH_TOKEN gh auth login --hostname github.com --git-protocol https --with-token', [], { quiet: true });
+      const ghLogin = remote(machineId, 'printenv GH_TOKEN | env -u GH_TOKEN gh auth login --hostname github.com --git-protocol https --with-token');
       if (ghLogin.status !== 0) {
         throw new Error('Could not sign gh in with the GH_TOKEN Secret on the machine.');
       }
@@ -266,7 +266,7 @@ const create = () => {
     }
     // The token signs Claude Code in, but interactive claude still opens its first-run login flow until onboarding is marked done.
     if (secrets.includes('CLAUDE_CODE_OAUTH_TOKEN')) {
-      if (remote(machineId, 'node', ['--stdin'], { quiet: true, input: CLAUDE_SETUP }).status !== 0) {
+      if (remote(machineId, 'node', ['--stdin'], { input: CLAUDE_SETUP }).status !== 0) {
         log('Could not sign Claude Code in for SSH sessions; it signs in only from login shells on this machine.');
       }
     }
