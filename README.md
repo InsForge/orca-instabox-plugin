@@ -51,6 +51,11 @@ Then turn on Orca's per-workspace environments: Settings → Experimental → Cl
 
   A fine-grained token with read access to just the repositories you use works too.
 
+  The Secret's variable only exists in `instabox exec` and login shells, not in the plain SSH
+  sessions Orca uses, so create also signs `gh` in with the placeholder (stored in
+  `~/.config/gh/hosts.yml`) and makes it git's credential helper. The real token never reaches the
+  machine.
+
 ## Signing in agents on the machine
 
 New machines also select these Instabox Secrets when you have saved them, so agents on the machine
@@ -59,7 +64,11 @@ are signed in without copying a real credential there:
 | Secret | Signs in | Save it with |
 | --- | --- | --- |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Claude Code, on your Claude subscription | `claude setup-token`, then `instabox secrets set CLAUDE_CODE_OAUTH_TOKEN --ai anthropic` |
-| `OPENAI_API_KEY` | Codex, billed to the API key (not yet verified with a real key) | `instabox secrets set OPENAI_API_KEY --ai openai` |
+| `OPENAI_API_KEY` | Codex, billed to the API key | `instabox secrets set OPENAI_API_KEY --ai openai` |
+
+For Claude Code, create also writes the placeholder into `env` in `~/.claude/settings.json`, so
+`claude` is signed in over plain SSH as well as in login shells. Codex keeps its key in
+`~/.codex/auth.json` after `codex login --with-api-key`.
 
 Codex's ChatGPT sign-in cannot travel this way, because its tokens rotate; run
 `codex login --device-auth` on the machine instead.
@@ -81,7 +90,11 @@ target it saved at create and never takes a new one on wake. It dies with the ma
 - Running the recipe command directly against real Instabox, outside Orca: a private repository
   clones with the `GH_TOKEN` Secret, and `claude -p` answers on the machine with the
   `CLAUDE_CODE_OAUTH_TOKEN` Secret.
-- Not verified: Codex with a real `OPENAI_API_KEY`, and Windows.
+- A workspace created from the "Run on" picker, checked over a plain (non-login) SSH command:
+  `git ls-remote` and `git push --dry-run` reach a private repository with the `GH_TOKEN` Secret,
+  `claude -p` answers with `CLAUDE_CODE_OAUTH_TOKEN`, and `codex exec` answers with a real
+  `OPENAI_API_KEY`.
+- Not verified: Windows.
 
 ## Develop
 
