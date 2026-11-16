@@ -52,9 +52,8 @@ Then turn on Orca's per-workspace environments: Settings → Experimental → Cl
   A fine-grained token with read access to just the repositories you use works too.
 
   The Secret's variable only exists in `instabox exec` and login shells, not in the plain SSH
-  sessions Orca uses, so create also signs `gh` in with the placeholder (stored in
-  `~/.config/gh/hosts.yml`) and makes it git's credential helper. The real token never reaches the
-  machine.
+  sessions Orca uses, so create also signs `gh` in with the placeholder, which gh keeps in its own
+  credential store, and makes it git's credential helper. The real token never reaches the machine.
 
 ## Signing in agents on the machine
 
